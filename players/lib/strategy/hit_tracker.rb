@@ -26,6 +26,16 @@ private
   # this checks for moves near the most recent hit, if none are found it
   # removes the hit from the list & checks the next one
   def seek_and_destroy
+    if hits.length >= 2
+      # calculate slope of last two hits & look in that direction
+      move = @hits[-2].send @hits[-1].slope(@hits[-2])
+      return move if valid_move?(move)
+
+      # try the opposite direction
+      move = @hits[-1].send @hits[-2].slope(@hits[-1])
+      return move if valid_move?(move)
+    end
+
     while hits.any?
       if move = move_near(hits.last)
         return move
