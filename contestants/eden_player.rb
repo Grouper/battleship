@@ -1,7 +1,7 @@
-class MinimumViablePlayer
+class EdenPlayer
   def name
     # Uniquely identify your player
-    "Your Name Here"
+    "Eden"
   end
 
   def new_game
