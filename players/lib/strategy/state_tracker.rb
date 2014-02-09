@@ -16,6 +16,10 @@ module StateTracker
 
 private
 
+  def largest_ship
+    remaining_ships.max
+  end
+
   def setup
     @remaining_ships = []
     super
@@ -28,6 +32,16 @@ private
     end
 
     @remaining_ships = ships
+  end
+
+  def rotated_state
+    @game_state.each.with_index.inject([]) do |array, (row, index)|
+      row.each_with_index do |column, j|
+        array[j] ||= []
+        array[j] << column
+      end
+      array
+    end
   end
 
   def sunk?
