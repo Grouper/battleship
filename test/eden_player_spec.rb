@@ -5,6 +5,8 @@ require 'pry'
 describe 'EdenPlayer' do
   before :each do
     @p = EdenPlayer.new
+    @board = EdenPlayer.new_board
+    @full_ship_set = [5, 4, 3, 3, 2]
   end
 
   it 'has a name' do
@@ -17,6 +19,12 @@ describe 'EdenPlayer' do
       pos = @p.next_hunting_point EdenPlayer.new_board
       pos[0].must_be_close_to 5, 2
       pos[1].must_be_close_to 5, 2
+    end
+    it 'will obey the parity rule when in hunt mode' do
+      skip "todo"
+    end
+    it 'will update the parity rule when ships are sunk' do
+      skip "todo"
     end
   end
 
@@ -40,7 +48,6 @@ describe 'EdenPlayer' do
 
   describe '#probable_enemy_occupations' do
     before :each do
-      @board = EdenPlayer.new_board
       @expected_pattern = [0, 1, 2, 3, 4, 0, 4, 3, 2, 1]
     end
 
@@ -60,51 +67,54 @@ describe 'EdenPlayer' do
     end
   end
 
-  describe '#lay_ship' do
-    it 'does not suggest an orientation outside of the board range' do
-      skip "todo"
+  describe '#aggregate_targets' do
+    before(:each) do
+      @board[5][5], @board[5][3] = [:hit, :miss]
     end
-    it 'does not overlap the ships' do
-      skip "todo"
+    it "doesn't recommend unreasonable points" do
+      probs = @p.aggregate_targets(@board, @full_ship_set, [5, 5])
+      probs.column_vectors[0..3].each do |e|
+        e.to_a.must_equal Array.new(10) { 0 }
+      end
     end
   end
 
-  describe '#position_aggregator' do
-    it 'correctly aggregates the possible orientations from #lay_ship' do
-      skip "todo"
+  describe '#update_state' do
+    before :each do
+      @sunk_destroyer_set = [5, 4, 3, 3]
     end
-  end
-
-  describe 'Offense' do
-
-    describe 'the parity rule' do
-      it 'will obey the parity rule when in hunt mode' do
-        skip "todo"
-      end
-      it 'will update the parity rule when ships are sunk' do
-        skip "todo"
-      end
+    it 'switches to targeting mode after first hit' do
+      @board[5][5] = :hit
+      @p.update_state!(@board, @full_ship_set)
+      @p.hunting.must_equal false
+      @p.last_hit.must_equal [5,5]
+      @p.opponents_ships.must_equal @full_ship_set
     end
-
-    describe 'responding to a hit' do
-      it 'enters target mode' do
-        skip "todo"
-      end
+    it 'maintains targeting mode after missing right after a hit' do
+      # setup situation where first firing was a hit
+      @board[5][5] = :hit
+      @p.hunting = false
+      @p.last_board = @board.dup
+      @p.last_hit = [5,5]
+      # after new action
+      @board[5][4] = :miss
+      @p.update_state!(@board, @full_ship_set)
+      @p.hunting.must_equal false
+      @p.last_hit.must_equal [5,5]
+      @p.opponents_ships.must_equal @full_ship_set
     end
-
-    describe 'responding to a sunk ship' do
-      it 'reenters hunt mode' do
-        skip "todo"
-      end
-    end
-
-    describe "#next_target's suggestions" do
-      it 'are within a plus shape of the hit' do
-        skip "todo"
-      end
-      it 'are within the range of the longest ship available' do
-        skip "todo"
-      end
+    it 'switches to hunting mode after sinking a ship' do
+      # setup situation where first firing was a hit, 2nd was a miss
+      @board[5][5], @board[5][4] = [:hit, :miss]
+      @p.hunting = false
+      @p.last_board = @board.dup
+      @p.last_hit = [5,5]
+      @p.opponents_ships = @full_ship_set
+      # after a successful sink
+      @board[5][6] = :hit
+      @p.update_state!(@board, @sunk_destroyer_set)
+      @p.hunting.must_equal true
+      @p.opponents_ships.must_equal @sunk_destroyer_set
     end
   end
 end

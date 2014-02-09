@@ -3,25 +3,29 @@ require 'matrix'
 
 class EdenPlayer
 
+  # needed to switch between shooting strategies
+  attr_accessor :hunting
+  # needed to track when a ship was sunk
+  attr_accessor :opponents_ships
+  attr_accessor :last_hit
+  attr_accessor :last_board
+
   ACROSS = Vector[1, 0]
   DOWN = Vector[0, 1]
 
+  def initialize
+    @hunting = true
+    @opponents_ships = [5, 4, 3, 3, 2]
+    @last_board = EdenPlayer.new_board
+  end
+
+  # Uniquely identifies President Eden
   def name
-    # Uniquely identify your player
     "Eden"
   end
 
+  # returns where to lay Eden's ships at the start of a new game
   def new_game
-    # return an array of 5 arrays containing
-    # [x,y, length, orientation]
-    # e.g.
-    # [
-    #   [0, 0, 5, :down],
-    #   [4, 4, 4, :across],
-    #   [9, 3, 3, :down],
-    #   [2, 2, 3, :across],
-    #   [9, 7, 2, :down]
-    # ]
     my_board = EdenPlayer.new_board
     ships = [5, 4, 3, 3, 2]
     probs = positional_probabilities my_board
@@ -36,10 +40,37 @@ class EdenPlayer
   end
 
   def take_turn(state, ships_remaining)
-    # state is the known state of opponents fleet
-    # ships_remaining is an array of the remaining opponents ships
+    update_state!(ships_remaining)
+    if @hunting
+      next_hunting_point(state)
+    else
+      next_target_point(state, ships_remaining, @last_hit)
+    end
+  end
 
-    return [x,y] # your next shot co-ordinates
+  # in charge of switching between hunting and targetting modes by detecting
+  # both new hits and new sunk ships. Mutates state.
+  def update_state!(new_board, ships_remaining)
+    if (hit = detect_hit(@last_board, new_board))
+      @hunting = false
+      @last_hit = hit
+    end
+    unless ships_remaining.sort == @opponents_ships.sort
+      @hunting, @opponents_ships = [true, ships_remaining]
+    end
+    @last_board = new_board
+  end
+
+  # detects differences between boards
+  def detect_hit(old_state, new_state)
+    new_state.each_with_index do |row, y|
+      next if row == old_state[y]
+      row.each_with_index do |sym, x|
+        next if sym == old_state[y][x]
+        return [x, y] if sym == :hit
+      end
+    end
+    nil
   end
 
   def lay_ship(options = {})
@@ -53,6 +84,19 @@ class EdenPlayer
         return [*options[:pos], options[:ship_length], rand_dir.keys.first]
       end
     end
+  end
+
+  def next_target_point(state, ships, pos)
+    sum_probs = aggregate_targets(state, ships, pos)
+    max = sum_probs.to_a.flatten.max
+    sum_probs.index(max).reverse
+  end
+
+  def aggregate_targets(state, ships, pos)
+    sum_probs = ships.inject(EdenPlayer.prob_board) do |a,e|
+      a + probable_enemy_occupations(ship_length: e, pos: pos, board: state)
+    end
+    sum_probs
   end
 
   # This method is used for evaluating where a ship could be on the board for
