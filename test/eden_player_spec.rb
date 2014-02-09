@@ -12,11 +12,29 @@ describe 'EdenPlayer' do
     name.must_equal "Eden"
   end
 
-  describe '#rand_pos' do
+  describe '#next_hunting_point' do
     it 'is unlikely to choose a non-central spot early on' do
-      pos = @p.rand_pos EdenPlayer.new_board
-      pos.first.must_be_close_to 5, 2
-      pos.last.must_be_close_to 5, 2
+      pos = @p.next_hunting_point EdenPlayer.new_board
+      pos[0].must_be_close_to 5, 2
+      pos[1].must_be_close_to 5, 2
+    end
+  end
+
+  describe '#new_game' do
+    it 'returns positions in the valid format' do
+      positions = @p.new_game
+      dirs = positions.map { |a| a.last }
+      dirs.select { |s| s == :down || s == :across }.length.must_equal 5
+      dirs = positions.map { |a| a[2] }
+      dirs.select { |l| l >= 2 && l <= 5 }.length.must_equal 5
+      dirs = positions.map { |a| a[0..1] }
+      dirs.flatten.select { |l| l >= 0 && l <= 9 }.length.must_equal 10
+    end
+    it 'does not return any overlapping ships' do
+      positions = @p.new_game
+      dict = {down: EdenPlayer::DOWN, across: EdenPlayer::ACROSS}
+      points = positions.map { |e| @p.body_from_head(Vector[*e[0..1]], e[2], dict[e[3]]) }
+      points.flatten.uniq.count.must_equal 17
     end
   end
 
@@ -43,27 +61,11 @@ describe 'EdenPlayer' do
   end
 
   describe '#lay_ship' do
-    describe 'generally, without a filter block' do
-      it 'does not suggest a ship outside of the board range' do
-        skip "todo"
-      end
-      it 'respects a limit parameter' do
-        skip "todo"
-      end
+    it 'does not suggest an orientation outside of the board range' do
+      skip "todo"
     end
-    describe 'with a filter block' do
-      it 'respects inclusion filters' do
-        skip "todo"
-      end
-      it 'respects exclusion filters' do
-        skip "todo"
-      end
-      it 'respects both filters simultaneously' do
-        skip "todo"
-      end
-      it 'generates all possible combinations' do
-        skip "todo"
-      end
+    it 'does not overlap the ships' do
+      skip "todo"
     end
   end
 

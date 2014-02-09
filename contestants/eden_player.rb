@@ -2,6 +2,10 @@ require 'set'
 require 'matrix'
 
 class EdenPlayer
+
+  ACROSS = Vector[1, 0]
+  DOWN = Vector[0, 1]
+
   def name
     # Uniquely identify your player
     "Eden"
@@ -18,10 +22,16 @@ class EdenPlayer
     #   [2, 2, 3, :across],
     #   [9, 7, 2, :down]
     # ]
-    my_board = new_board
+    my_board = EdenPlayer.new_board
     ships = [5, 4, 3, 3, 2]
+    probs = positional_probabilities my_board
     ship_pos = ships.map do |ship|
-      lay_ship({ship_length: ship, board: my_board})
+      laid = nil
+      until laid
+        pos = draw_next_min probs
+        laid = lay_ship({ship_length: ship, board: my_board, pos: pos})
+      end
+      laid
     end
   end
 
@@ -32,10 +42,17 @@ class EdenPlayer
     return [x,y] # your next shot co-ordinates
   end
 
-  def lay_my_ship(options = {})
-    fail 'Board not found!' unless options[:board]
-    options[:pos] ||= rand_pos(options[:board])
-    orient_my_ship(options.merge limit: 1)
+  def lay_ship(options = {})
+    dirs = [{down: DOWN}, {across: ACROSS}]
+    until dirs.empty?
+      rand_dir = dirs.delete dirs.sample
+      body = body_from_head options[:pos], options[:ship_length], rand_dir.values.first
+      if valid? body, options[:board]
+        # modifies the board
+        fill_game_board!(options[:board], :taken, body)
+        return [*options[:pos], options[:ship_length], rand_dir.keys.first]
+      end
+    end
   end
 
   # This method is used for evaluating where a ship could be on the board for
@@ -48,45 +65,62 @@ class EdenPlayer
     # starting with the rightmost...leftmost. Then bottommost...topmost
     occupation_points = []
     center = Vector[*options[:pos]]
-    translate_x, translate_y = [Vector[1, 0], Vector[0, 1]]
     # horizontally, until ship goes too left
     head = center.dup
     until head == center + Vector[-(options[:ship_length]), 0]
-      body = (0...options[:ship_length]).map { |i| head + (i * translate_x) }
+      body = body_from_head(head, options[:ship_length], ACROSS)
       body.delete center
       occupation_points << body if valid?(body, options[:board])
-      head -= translate_x
+      head -= ACROSS
     end
     # vertically, again until ship goes too far up
     head = center.dup
     until head == center + Vector[0, -(options[:ship_length])]
-      body = (0...options[:ship_length]).map { |i| head + (i * translate_y) }
+      body = body_from_head(head, options[:ship_length], DOWN)
       body.delete center
       occupation_points << body if valid?(body, options[:board])
-      head -= translate_y
+      head -= DOWN
     end
     EdenPlayer.prob_board occupation_points.flatten
+  end
+
+  def body_from_head(head, length, direction)
+    head = Vector[*head] unless head.is_a? Vector
+    (0...length).map { |i| head + (i * direction) }
   end
 
   def valid?(body, board)
     body.each do |coord|
       x, y = [coord[0], coord[1]]
+      return false unless x >= 0 && x <= 9 && y >= 0 && y <= 9
       return false unless board[x][y] == :unknown
     end
     true
   end
 
-  def rand_pos(board)
+  def next_hunting_point(board)
+    probs = positional_probabilities(board)
+    # here would do parity filtering
+    probs.max_by { |h| h[:rank] }[:pos]
+  end
+
+  # specifically for narrowing down points for laying ships
+  def draw_next_min(prob_set)
+    min = prob_set.min_by { |h| h[:rank] }
+    prob_set.delete min
+    min[:pos]
+  end
+
+  # given a board, create a set containing points and ranks of likeliness
+  def positional_probabilities(board)
     ranked = Set.new
-    board.each_with_index do |row, x|
-      row.each_with_index do |e, y|
+    board.each_with_index do |row, y|
+      row.each_with_index do |e, x|
         rank = (e == :unknown ? w_mid(x) * w_mid(y) : 0)
-        ranked << [x, y, rank]
+        ranked << {pos: Vector[x, y], rank: rank}
       end
     end
-    # here would do parity filtering
-
-    ranked.max_by { |arr| arr.last }[0..1]
+    ranked
   end
 
   # weight middle of the battleship board higher
@@ -106,5 +140,13 @@ class EdenPlayer
       board[x][y] += 1
     end
     Matrix[*board]
+  end
+
+  def fill_game_board!(board, symbol, arr_coords)
+    arr_coords.each do |coord|
+      x, y = [coord[0], coord[1]]
+      board[x][y] = symbol
+    end
+    board
   end
 end
