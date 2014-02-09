@@ -1,11 +1,11 @@
 require "minitest/autorun"
 require_relative "../contestants/eden_player"
 
-class EdenPlayerTest < MiniTest::Unit::TestCase
+describe 'EdenPlayer' do
 
-  def test_name
+  it 'has a name' do
     name = EdenPlayer.new.name
-    assert_equal name, "Eden"
+    name.must_equal "Eden"
   end
 
 end
