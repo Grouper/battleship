@@ -13,6 +13,7 @@ Insight found from: [Nick Berry](http://www.datagenetics.com/blog/december32011/
 
 #### Stretch goals
 
+* Use linear transformation of probabilities from [online](http://thevirtuosi.blogspot.com/2011/10/linear-theory-of-battleship.html) in `w_mid` for weighting central board pieces instead
 * Experiment with grouping strategy
 * investigate deffensive possibilities against other AI
 * investigate learning possibilities against other AI
