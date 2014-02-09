@@ -8,6 +8,13 @@ module HitTracker
 
   def take_turn *args
     track_hits
+
+    if sunk?
+      slope = @hits[-1].slope @hits[-2]                       # calculate slope of last two hits
+      ship  = sunk.times.map { |n| @hits.last.send slope, n } # use slope * length of ship to calculate ship coords
+      @hits = @hits - ship                                    # remove ship coords from hits
+    end
+
     @next_move ||= seek_and_destroy
     super
   end
@@ -18,8 +25,6 @@ private
   #
   # this checks for moves near the most recent hit, if none are found it
   # removes the hit from the list & checks the next one
-  #
-  # how do we avoid wasting turns on empty spaces near hits?
   def seek_and_destroy
     while hits.any?
       if move = move_near(hits.last)

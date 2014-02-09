@@ -20,11 +20,17 @@ class Point
     coords == other_point.coords
   end
 
+  alias :eql? :==
+
   # Returns an array representing the x and y coordinates of this point.
   #
   # @return [Array] this point's coordinates
   def coords
     [x, y]
+  end
+
+  def hash
+    coords.hash
   end
 
   # Translate this point down by the specified distance.
@@ -55,6 +61,21 @@ class Point
   # @return [Point] a new point representing the new position
   def left n = 1
     right -n
+  end
+
+  # Calculate slope (as a direction)
+  #
+  # @param other_point [Point] the point to compare
+  # @return [Symbol] the name of the direction to move
+  def slope other_point
+    rise = y - other_point.y
+    run  = x - other_point.x
+
+    if rise == 0
+      run > 0 ? :left : :right
+    else
+      rise > 0 ? :up  : :down
+    end
   end
 
   # Translate this point left by the specified distance.
