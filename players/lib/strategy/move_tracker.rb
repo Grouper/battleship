@@ -10,8 +10,12 @@ module MoveTracker
 
 private
 
+  def invalid_move? move
+    !valid_move? move
+  end
+
   def move_near point
-    point.neighbors.reject { |pt| pt.coords.any? { |n| n > 9 or 0 > n } or moves.include?(pt) }.sample
+    point.neighbors.select { |pt| valid_move? pt }.sample
   end
 
   def previous_move
@@ -22,7 +26,7 @@ private
   def random_move
     begin
       move = Point.new rand(10), rand(10)
-    end while moves.include?(move)
+    end until valid_move?(move)
     move
   end
 
@@ -34,6 +38,12 @@ private
   def track move
     @moves.push move
     move
+  end
+
+  def valid_move? move
+    return false if move.coords.any? { |n| n > 9 or 0 > n }
+    return false if moves.include?(move)
+    true
   end
 
 end
