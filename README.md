@@ -13,6 +13,7 @@ Insight found from: [Nick Berry](http://www.datagenetics.com/blog/december32011/
 
 #### Stretch goals
 
+* experiment with skewing probability closest to ships like [here](http://jsfiddle.net/FgbAK/)
 * Use linear transformation of probabilities from [online](http://thevirtuosi.blogspot.com/2011/10/linear-theory-of-battleship.html) in `w_mid` for weighting central board pieces instead
 * Experiment with grouping strategy
 * investigate deffensive possibilities against other AI
