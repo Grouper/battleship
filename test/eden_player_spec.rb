@@ -28,6 +28,13 @@ describe 'EdenPlayer' do
     end
   end
 
+  describe '#take_turn' do
+    it 'does not make an initial invalid move' do
+      turn = @p.take_turn(@board, @full_ship_set)
+      turn.must_be_instance_of Array
+    end
+  end
+
   describe '#new_game' do
     it 'returns positions in the valid format' do
       positions = @p.new_game

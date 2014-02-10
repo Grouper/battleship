@@ -40,7 +40,7 @@ class EdenPlayer
   end
 
   def take_turn(state, ships_remaining)
-    update_state!(ships_remaining)
+    update_state!(state, ships_remaining)
     if @hunting
       next_hunting_point(state)
     else
@@ -89,7 +89,7 @@ class EdenPlayer
   def next_target_point(state, ships, pos)
     sum_probs = aggregate_targets(state, ships, pos)
     max = sum_probs.to_a.flatten.max
-    sum_probs.index(max).reverse
+    sum_probs.index(max).to_a.reverse
   end
 
   def aggregate_targets(state, ships, pos)
@@ -113,7 +113,6 @@ class EdenPlayer
     head = center.dup
     until head == center + Vector[-(options[:ship_length]), 0]
       body = body_from_head(head, options[:ship_length], ACROSS)
-      body.delete center
       occupation_points << body if valid?(body, options[:board])
       head -= ACROSS
     end
@@ -121,11 +120,11 @@ class EdenPlayer
     head = center.dup
     until head == center + Vector[0, -(options[:ship_length])]
       body = body_from_head(head, options[:ship_length], DOWN)
-      body.delete center
       occupation_points << body if valid?(body, options[:board])
       head -= DOWN
     end
-    EdenPlayer.prob_board occupation_points.flatten
+    points = remove_invalid_shots!(occupation_points.flatten, options[:board])
+    EdenPlayer.prob_board points
   end
 
   def body_from_head(head, length, direction)
@@ -133,11 +132,19 @@ class EdenPlayer
     (0...length).map { |i| head + (i * direction) }
   end
 
+  def remove_invalid_shots!(array_of_vect, board)
+    array_of_vect.map do |coord|
+      x, y = [coord[0], coord[1]]
+      next unless board[y][x] == :unknown
+      coord
+    end.compact
+  end
+
   def valid?(body, board)
     body.each do |coord|
       x, y = [coord[0], coord[1]]
       return false unless x >= 0 && x <= 9 && y >= 0 && y <= 9
-      return false unless board[x][y] == :unknown
+      return false unless board[y][x] == :unknown || board[y][x] == :hit
     end
     true
   end
@@ -145,7 +152,7 @@ class EdenPlayer
   def next_hunting_point(board)
     probs = positional_probabilities(board)
     # here would do parity filtering
-    probs.max_by { |h| h[:rank] }[:pos]
+    probs.max_by { |h| h[:rank] }[:pos].to_a
   end
 
   # specifically for narrowing down points for laying ships
@@ -170,7 +177,7 @@ class EdenPlayer
   # weight middle of the battleship board higher
   # return a higher output number when the input number is closer to 5
   def w_mid(num)
-    ((num - 5).abs - 5).abs
+    ((num - 5).abs - 6).abs
   end
 
   def self.new_board
@@ -181,7 +188,7 @@ class EdenPlayer
     board = Array.new(10) { Array.new(10) { 0 } }
     coords_to_fill.each do |coord|
       x, y = [coord[0], coord[1]]
-      board[x][y] += 1
+      board[y][x] += 1
     end
     Matrix[*board]
   end
@@ -189,7 +196,7 @@ class EdenPlayer
   def fill_game_board!(board, symbol, arr_coords)
     arr_coords.each do |coord|
       x, y = [coord[0], coord[1]]
-      board[x][y] = symbol
+      board[y][x] = symbol
     end
     board
   end
