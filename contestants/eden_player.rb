@@ -164,11 +164,41 @@ class EdenPlayer
 
   # given a board, create a set containing points and ranks of likeliness
   def positional_probabilities(board)
-    ranked = Set.new
+    ranked, rank = Set.new
+    miss_coords = []
     board.each_with_index do |row, y|
       row.each_with_index do |e, x|
-        rank = (e == :unknown ? w_mid(x) * w_mid(y) : 0)
-        ranked << {pos: Vector[x, y], rank: rank}
+        # on average, ships are more likely to be in the center
+        if e == :unknown
+          ranked << {pos: Vector[x, y], rank: w_mid(x) * w_mid(y) }
+        elsif e == :miss
+          miss_coords << Vector[x, y]
+        end
+      end
+    end
+    # annotate the board with zero probabilities for squares within a
+    # ship's reach of a missed square
+    miss_coords.each do |miss_coord|
+      around = [ACROSS, -1 * ACROSS, DOWN, -1 * DOWN]
+      range = @opponents_ships.min - 1
+      (1..range).each do |range_mem|
+        # we will throw out each near_miss, unless it is next to a hit square
+        around.each do |transformation|
+          near_miss_coord = (range_mem * transformation) + miss_coord
+          near_miss = ranked.detect { |p| p[:pos] == near_miss_coord }
+          # will only find unknowns on the board
+          next unless near_miss
+          ranked.delete(near_miss)
+          # check if near_miss is adjacent to a hit square
+          near_hits = around.any? do |trans|
+            x, y = (trans + near_miss_coord).to_a
+            board[y][x] == :hit if board[y]
+          end
+          if near_hits
+            near_miss[:rank] = 1
+            ranked << near_miss
+          end
+        end
       end
     end
     ranked

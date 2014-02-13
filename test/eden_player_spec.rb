@@ -16,15 +16,35 @@ describe 'EdenPlayer' do
 
   describe '#next_hunting_point' do
     it 'is unlikely to choose a non-central spot early on' do
-      pos = @p.next_hunting_point EdenPlayer.new_board
+      pos = @p.next_hunting_point @board
       pos[0].must_be_close_to 5, 2
       pos[1].must_be_close_to 5, 2
     end
-    it 'will obey the parity rule when in hunt mode' do
-      skip "todo"
+    it 'will not recommend a spot that was already missed' do
+      @board[5][5] = :miss
+      pos = @p.next_hunting_point @board
+      [5,5].wont_equal pos
     end
-    it 'will update the parity rule when ships are sunk' do
-      skip "todo"
+    it 'will obey the parity rule when early in hunt mode' do
+      @board[5][5] = :miss
+      pos = @p.next_hunting_point @board
+      [[4,5],[5,4],[6,5],[5,6]].wont_include pos
+    end
+    it 'will break the parity rule when neccessary' do
+      @board = [
+        [:hit, :hit, :hit, :hit, :hit, :miss, :unknown, :unknown, :miss, :unknown],
+        [:hit, :hit, :hit, :hit, :miss, :miss, :unknown, :miss, :unknown, :miss],
+        [:hit, :hit, :hit, :miss, :miss, :unknown, :miss, :unknown, :miss, :unknown],
+        [:hit, :hit, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss],
+        [:hit, :hit, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown],
+        [:unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss],
+        [:miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown],
+        [:unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss],
+        [:miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown],
+        [:unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss, :unknown, :miss]
+      ]
+      @p.opponents_ships = [3]
+      pos = @p.next_hunting_point @board
     end
   end
 
