@@ -32,7 +32,8 @@ class EdenPlayer
     ship_pos = ships.map do |ship|
       laid = nil
       until laid
-        pos = draw_next_min probs
+        rand_branch = rand(999) % 3
+        pos = rand(999) % 3 == 1 ? [rand(10), rand(10)] : draw_next_min(probs)
         laid = lay_ship({ship_length: ship, board: my_board, pos: pos})
       end
       laid
