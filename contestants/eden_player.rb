@@ -33,6 +33,9 @@ class EdenPlayer
       laid = nil
       until laid
         rand_branch = rand(999) % 3
+        # 1/3rd of the time, don't lay the ship in lowest probability spot
+        # near edge, this gives a grouping formation that gives a few ships
+        # a great area that they may be found in
         pos = rand(999) % 3 == 1 ? [rand(10), rand(10)] : draw_next_min(probs)
         laid = lay_ship({ship_length: ship, board: my_board, pos: pos})
       end
@@ -195,10 +198,8 @@ class EdenPlayer
             x, y = (trans + near_miss_coord).to_a
             board[y][x] == :hit if board[y]
           end
-          if near_hits
-            near_miss[:rank] = 1
-            ranked << near_miss
-          end
+          near_miss[:rank] = (near_hits ? 0 : -1)
+          ranked << near_miss
         end
       end
     end
