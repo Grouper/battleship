@@ -1,14 +1,27 @@
+# Insight found from:
+# [Nick Berry](http://www.datagenetics.com/blog/december32011/) and
+# [Keith Randall](http://stackoverflow.com/questions/1631414/what-is-the-best-battleship-ai)
+
+# Playing Strategy
+# * Hunt Mode - "randomly" until a ship is hit, with the restrictions:
+#     * Parity filtering: while the destroyer is alive, do not shoot in
+#       destroyer range of known misses...once sunk, do not shoot within
+#       cruiser range of known misses... etc.
+#     * Background probability: also weight center tiles the most of the
+#       remaining valid spaces
+# * Target Mode - Each time a ship is hit, calculate all of the possible
+#   arrangements of the remaining ships on the board, and fire on the next
+#   most probable spot until that ship is sunk. Then return to Hunt mode.
+
 require 'set'
 require 'matrix'
 
 class EdenPlayer
-
-  # needed to switch between shooting strategies
+  # saves state of shooting strategy
   attr_accessor :hunting
-  # needed to track when a ship was sunk
+  # state of emey's ships are needed to notice when one sunk
   attr_accessor :opponents_ships
-  attr_accessor :last_hit
-  attr_accessor :last_board
+  attr_accessor :last_hit, :last_board
 
   ACROSS = Vector[1, 0]
   DOWN = Vector[0, 1]
@@ -84,7 +97,7 @@ class EdenPlayer
       body = body_from_head options[:pos], options[:ship_length], rand_dir.values.first
       if valid? body, options[:board]
         # modifies the board
-        fill_game_board!(options[:board], :taken, body)
+        fill_game_board(options[:board], :taken, body)
         return [*options[:pos], options[:ship_length], rand_dir.keys.first]
       end
     end
@@ -97,17 +110,16 @@ class EdenPlayer
   end
 
   def aggregate_targets(state, ships, pos)
-    sum_probs = ships.inject(EdenPlayer.prob_board) do |a,e|
+    sum_probs = ships.inject(EdenPlayer.prob_board_matrix) do |a,e|
       a + probable_enemy_occupations(ship_length: e, pos: pos, board: state)
     end
     sum_probs
   end
 
-  # This method is used for evaluating where a ship could be on the board for
-  # firing, it returns a matrix representing filled space for each position
-  # for each allowed position of a ship, it creates a matrix representation
-  # of the board with each point filled with the number of orientations that
-  # occupy that point on the board
+  # This method is used for evaluating where a ship could be on the board
+  # after a part of that ship has been hit. It returns a matrix representation
+  # of the board with each square filled with the number of orientations that
+  # a ship could occupy that square on the board
   def probable_enemy_occupations(options = {})
     fail 'Position not given!' unless options[:pos]
     # starting with the rightmost...leftmost. Then bottommost...topmost
@@ -128,7 +140,7 @@ class EdenPlayer
       head -= DOWN
     end
     points = remove_invalid_shots!(occupation_points.flatten, options[:board])
-    EdenPlayer.prob_board points
+    EdenPlayer.prob_board_matrix points
   end
 
   def body_from_head(head, length, direction)
@@ -155,7 +167,6 @@ class EdenPlayer
 
   def next_hunting_point(board)
     probs = positional_probabilities(board)
-    # here would do parity filtering
     probs.max_by { |h| h[:rank] }[:pos].to_a
   end
 
@@ -168,47 +179,50 @@ class EdenPlayer
 
   # given a board, create a set containing points and ranks of likeliness
   def positional_probabilities(board)
-    ranked, rank = Set.new
+    bg_probs = Set.new
     miss_coords = []
     board.each_with_index do |row, y|
       row.each_with_index do |e, x|
         # on average, ships are more likely to be in the center
         if e == :unknown
-          ranked << {pos: Vector[x, y], rank: w_mid(x) * w_mid(y) }
+          bg_probs << {pos: Vector[x, y], rank: middleness(x) * middleness(y) }
         elsif e == :miss
           miss_coords << Vector[x, y]
         end
       end
     end
-    # annotate the board with zero probabilities for squares within a
-    # ship's reach of a missed square
+    skew_probs_near_misses! bg_probs, miss_coords, board
+  end
+
+  # annotate the board with zero probabilities for squares within a
+  # ship's reach of a missed square
+  def skew_probs_near_misses!(set_of_probs, miss_coords, board)
     miss_coords.each do |miss_coord|
       around = [ACROSS, -1 * ACROSS, DOWN, -1 * DOWN]
       range = @opponents_ships.min - 1
-      (1..range).each do |range_mem|
+      (1..range).each do |range_unit|
         # we will throw out each near_miss, unless it is next to a hit square
         around.each do |transformation|
-          near_miss_coord = (range_mem * transformation) + miss_coord
-          near_miss = ranked.detect { |p| p[:pos] == near_miss_coord }
-          # will only find unknowns on the board
+          near_miss_coord = (range_unit * transformation) + miss_coord
+          near_miss = set_of_probs.detect { |p| p[:pos] == near_miss_coord }
+          # will only find unknowns in the set
           next unless near_miss
-          ranked.delete(near_miss)
           # check if near_miss is adjacent to a hit square
           near_hits = around.any? do |trans|
             x, y = (trans + near_miss_coord).to_a
+            # lazy checking of out of bounds, should really have a valid? method
             board[y][x] == :hit if board[y]
           end
           near_miss[:rank] = (near_hits ? 0 : -1)
-          ranked << near_miss
         end
       end
     end
-    ranked
+    set_of_probs
   end
 
   # weight middle of the battleship board higher
   # return a higher output number when the input number is closer to 5
-  def w_mid(num)
+  def middleness(num)
     ((num - 5).abs - 6).abs
   end
 
@@ -216,7 +230,7 @@ class EdenPlayer
     Array.new(10) { Array.new(10) { :unknown } }
   end
 
-  def self.prob_board(coords_to_fill = [])
+  def self.prob_board_matrix(coords_to_fill = [])
     board = Array.new(10) { Array.new(10) { 0 } }
     coords_to_fill.each do |coord|
       x, y = [coord[0], coord[1]]
@@ -225,7 +239,7 @@ class EdenPlayer
     Matrix[*board]
   end
 
-  def fill_game_board!(board, symbol, arr_coords)
+  def fill_game_board(board, symbol, arr_coords)
     arr_coords.each do |coord|
       x, y = [coord[0], coord[1]]
       board[y][x] = symbol
