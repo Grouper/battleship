@@ -1,24 +1,6 @@
 Battleship
 ==========
 
-Playing Strategy
----
-
-Insight found from: [Nick Berry](http://www.datagenetics.com/blog/december32011/) and [Keith Randall](http://stackoverflow.com/questions/1631414/what-is-the-best-battleship-ai)
-
-* Hunt "randomly" until a ship is hit, with the restrictions:
-    * Parity filtering: while the destroyer is alive, do not shoot in destroyer range of known misses...once sunk, do not shoot within cruiser range of known misses
-    * Background probability: also weight center tiles the most of the remaining valid spaces
-* Target: Each time a ship is hit, calculate all of the possible arrangements of the remaining ships on the board, and fire on the next most probable spot until that ship is sunk. Then return to Hunt mode.
-
-#### Stretch goals
-
-* experiment with skewing probability closest to ships like [here](http://jsfiddle.net/FgbAK/)
-* Use linear transformation of probabilities from [online](http://thevirtuosi.blogspot.com/2011/10/linear-theory-of-battleship.html) in `w_mid` for weighting central board pieces instead
-* Experiment with grouping strategy
-* investigate deffensive possibilities against other AI
-* investigate learning possibilities against other AI
-
 The game
 --------
 
