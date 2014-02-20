@@ -3,7 +3,7 @@ class WismerPlayer
   attr_reader :ships, :enemy_ships
   attr_accessor :score_grid
   def name
-    "Human Player"
+    "Wismer Player"
   end
 
   def new_game
@@ -16,7 +16,7 @@ class WismerPlayer
     @enemy_ships = [5, 4, 3, 3, 2]
 
     # after placement of the ships the battle map is converted into a score board
-    # with each block in the grid given a certain score depending on it's proximity to the 
+    # with each block in the grid given a certain score depending on it's proximity to the
     # edge of the board
 
     @score_grid = Matrix.build(10).to_a.map { |elem| assign_base_score(elem.reverse) }
@@ -53,7 +53,7 @@ class WismerPlayer
     # if last was a hit and no ships were sunk, then the modifier for the adjacent tiles is doubled.
     # if last was a miss and no ships were sunk, the modifier is left unchanged
 
-    if last_shot_hit? && !ship_sunk? 
+    if last_shot_hit? && !ship_sunk?
       adjust_table(:mod)
     else
       adjust_table
@@ -69,7 +69,7 @@ class WismerPlayer
   end
 
   def ship_size
-    @enemy_ships.max
+    @enemy_ships.max || 1
   end
 
   def last_shot_hit?
@@ -99,7 +99,7 @@ class WismerPlayer
     # by way of the "cardinal" direction, the adjacent tile gets selected.
 
     case direction
-    when :up then y += 1 
+    when :up then y += 1
     when :down then y -= 1
     when :left  then x += 1
     when :right then x -= 1
@@ -108,9 +108,9 @@ class WismerPlayer
     # add conditional to prevent going over the board
     tile       = @score_grid.find { |e| e[1..2] == [x, y] }
     tile_index = @score_grid.index(tile)
-    if n > 0 && [y, x].all? { |num| (0..9).cover?(num) } 
-      # using 'n' as the number of steps to repeat, the new tile that's selected will increase in value or decrease depending on the 
-      # proximity to the original shot. Each additional tile will decrease the modifier. 
+    if n > 0 && [y, x].all? { |num| (0..9).cover?(num) }
+      # using 'n' as the number of steps to repeat, the new tile that's selected will increase in value or decrease depending on the
+      # proximity to the original shot. Each additional tile will decrease the modifier.
       # e.g. A tile that is 1 tile above a hit will receive a bonus of +2 to the tile's value.
 
       # The reverse is true for a miss.
@@ -130,7 +130,7 @@ class WismerPlayer
 
   def best_shot
 
-    # since the board_map method will keep track of the hits and misses and their respective locations, 
+    # since the board_map method will keep track of the hits and misses and their respective locations,
     # best_shot will remove these shots from the possible targets so as to prevent shooting at the same spot over and over again.
 
     score_list.delete_if { |num| board_map.include?(num[1..2]) }.last[1..2]
