@@ -79,6 +79,8 @@ example above, we can see that the player has already played `[0,0]`, yielding
 a hit, and `[1,0]`, giving a miss. They can now return a reasonable guess of
 `[0,1]` for their next shot.
 
+Is there a time limit for making a move?
+
 The console runner
 ------------------
 
